@@ -8,9 +8,10 @@ import { addNote, redo, removeNote, selectNote, selectTrack, transposeTrack, und
 
 export default function ScoreEditor() {
   const dispatch = useDispatch<AppDispatch>()
-  const { tracks, selectedTrackId, selectedNoteIndex, history, future, dirty } = useSelector((state: RootState) => state.score)
+  const { tracks, selectedTrackId, selectedNoteIndex, history, future, dirty, diffs } = useSelector((state: RootState) => state.score)
   const track = tracks.find((item) => item.id === selectedTrackId)!
   const note = track.notes[selectedNoteIndex]
+  const noteDiff = diffs.find((item) => item.trackId === selectedTrackId && item.noteIndex === selectedNoteIndex)
   const scoreRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -48,7 +49,12 @@ export default function ScoreEditor() {
     <Alert type="info" showIcon message={`${track.instrument} · ${track.clef === 'treble' ? '高音谱号' : track.clef === 'bass' ? '低音谱号' : '中音谱号'}`} description="当前显示移调后的实际记谱音高。移调仅改变当前声部，不修改总谱其他声部。" style={{ marginBottom: 12 }} />
     <div className="score-grid">
       <section><div className="score-canvas-wrap" ref={scoreRef} /><div className="note-strip">{track.notes.map((item,index)=><button key={item.id} className={`note-chip ${index===selectedNoteIndex?'active':''}`} onClick={()=>dispatch(selectNote(index))}><b>{index+1}</b><small>{item.key.replace('/', '')} · {item.dynamic}</small></button>)}</div><Space wrap><Button icon={<PlusOutlined />} onClick={()=>dispatch(addNote())}>添加音符</Button><Button danger icon={<DeleteOutlined />} onClick={()=>dispatch(removeNote())}>删除当前</Button><Button onClick={()=>update({ duration: note?.duration === 'q' ? 'h' : note?.duration === 'h' ? '8' : 'q' })}>切换时值</Button><Button onClick={()=>update({ tie: !note?.tie })}>{note?.tie ? '取消延音' : '增加延音'}</Button><Button onClick={()=>update({ accidental: note?.accidental ? undefined : '#' })}>{note?.accidental ? '移除临时记号' : '增加升号'}</Button></Space></section>
-      <aside className="panel"><h3>音符属性</h3><label>力度</label><Select value={note?.dynamic} style={{width:'100%'}} options={['pp','p','mp','mf','f','ff'].map((value)=>({value,label:value}))} onChange={(value)=>update({ dynamic:value })} /><label>表情标记</label><Select value={note?.expression} allowClear style={{width:'100%'}} options={[{value:'dolce',label:'dolce 柔和地'},{value:'cantabile',label:'cantabile 如歌地'},{value:'marcato',label:'marcato 着重地'}]} onChange={(value)=>update({ expression:value ?? '' })} /><Divider /><h3>和弦与节奏校验</h3><div className="check-row"><span>小节拍数</span><b className="success">完整</b></div><div className="check-row"><span>声部音域</span><b className="success">符合</b></div><div className="check-row"><span>移调范围</span><b className="warning">圆号需复核</b></div><Alert type="warning" showIcon message="第 2 小节力度冲突" description="指挥评论要求圆号再弱一级，请应用评论后形成新版本。" style={{ marginTop: 14 }} /></aside>
+      <aside className="panel"><h3>音符属性</h3><label>力度</label><Select value={note?.dynamic} style={{width:'100%'}} options={['pp','p','mp','mf','f','ff'].map((value)=>({value,label:value}))} onChange={(value)=>update({ dynamic:value })} /><label>表情标记</label><Select value={note?.expression} allowClear style={{width:'100%'}} options={[{value:'dolce',label:'dolce 柔和地'},{value:'cantabile',label:'cantabile 如歌地'},{value:'marcato',label:'marcato 着重地'}]} onChange={(value)=>update({ expression:value ?? '' })} /><Divider /><h3>和弦与节奏校验</h3><div className="check-row"><span>小节拍数</span><b className="success">完整</b></div><div className="check-row"><span>声部音域</span><b className="success">符合</b></div><div className="check-row"><span>移调范围</span><b className="warning">圆号需复核</b></div>{noteDiff ? (noteDiff.decision === 'pending'
+        ? <Alert type="warning" showIcon message={`v12 存在${noteDiff.field}差异：${noteDiff.before} → ${noteDiff.after}`} description={noteDiff.linkedCommentId ? `关联评论 ${noteDiff.linkedCommentId}，请到“版本与评论”页接受后并入总谱。` : '请到“版本与评论”页逐条处置。'} style={{ marginTop: 14 }} />
+        : noteDiff.decision === 'accepted'
+          ? <Alert type="success" showIcon message={`已接受${noteDiff.field}差异并并入总谱（${noteDiff.after}）`} style={{ marginTop: 14 }} />
+          : <Alert type="info" showIcon message={`${noteDiff.field}差异已拒绝，保留原值（${noteDiff.before}）并标清`} style={{ marginTop: 14 }} />)
+      : <Alert type="info" showIcon message="该音符无版本差异" description="所有力度、延音线改动均须在“版本与评论”页接受后才会并入总谱。" style={{ marginTop: 14 }} />}</aside>
     </div>
   </main>
 }

@@ -13,6 +13,8 @@ export default function App() {
   const location = useLocation()
   const dispatch = useDispatch<AppDispatch>()
   const dirty = useSelector((state: RootState) => state.score.dirty)
+  const baselines = useSelector((state: RootState) => state.score.baselines)
+  const latestVersion = useSelector((state: RootState) => state.score.versions[0])
   const items = [
     { key: '/', icon: <AudioOutlined />, label: <Link to="/">作品总览</Link> },
     { key: '/score', icon: <FileTextOutlined />, label: <Link to="/score">总谱编辑</Link> },
@@ -27,7 +29,7 @@ export default function App() {
         <div className="side-status"><b>《潮汐线》</b><small>总谱 12 小节 · 分谱 4 册</small></div>
       </Layout.Sider>
       <Layout>
-        <Layout.Header className="top-header"><div><b>沈青 · 室内交响作品</b><Tag style={{ marginLeft: 10 }} color={dirty ? 'orange' : 'green'}>{dirty ? '未保存修改' : '版本 v12 已保存'}</Tag></div><Space><Button>打印预览</Button><Button type="primary" icon={<SaveOutlined />} onClick={() => dispatch(saveVersion())}>形成版本</Button></Space></Layout.Header>
+        <Layout.Header className="top-header"><div><b>沈青 · 室内交响作品</b><Tag style={{ marginLeft: 10 }} color={baselines.length ? 'blue' : dirty ? 'orange' : 'green'}>{baselines.length ? `基线 ${baselines[0]!.id} 已锁定 · 新草稿` : dirty ? '未保存修改' : `版本 ${latestVersion?.id ?? 'v12'} 已保存`}</Tag></div><Space><Button>打印预览</Button><Button type="primary" icon={<SaveOutlined />} onClick={() => dispatch(saveVersion())}>形成版本</Button></Space></Layout.Header>
         <Layout.Content><Routes><Route path="/" element={<Overview />} /><Route path="/score" element={<ScoreEditor />} /><Route path="/parts" element={<Parts />} /><Route path="/versions" element={<Versions />} /><Route path="*" element={<Navigate to="/" replace />} /></Routes></Layout.Content>
       </Layout>
     </Layout>

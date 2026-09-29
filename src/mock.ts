@@ -1,4 +1,4 @@
-import type { ScoreComment, ScoreNote, ScoreVersion, Track } from './types'
+import type { PartSettings, ScoreComment, ScoreNote, ScoreVersion, Track } from './types'
 
 const notes = (keys: string[]): ScoreNote[] => keys.map((key, index) => ({ id: `N-${index + 1}`, key, duration: index % 4 === 0 ? 'h' : 'q', dynamic: index < 2 ? 'mp' : 'mf', tie: index === 2, expression: index === 3 ? 'dolce' : '' }))
 
@@ -15,7 +15,30 @@ export const seedComments: ScoreComment[] = [
   { id: 'CM-3', measure: 6, author: '出版 · 赵晴', content: '单簧管分谱需在换页处保留 2 小节提示音。', resolved: true },
 ]
 
+/** 评论锚点：声部:音符序号（或 :pageTurn）→ 评论 id */
+export const commentAnchors: Record<string, string> = {
+  'TR-03:4': 'CM-1',
+  'TR-03:11': 'CM-2',
+  'TR-02:pageTurn': 'CM-3',
+}
+
+const defaultSettings = (): PartSettings => ({ pageTurnAfter: 6, cueMeasures: 0, showCue: true })
+
+/** 当前分谱出版设置（与 v11 一致） */
+export const seedPartSettings: Record<string, PartSettings> = Object.fromEntries(seedTracks.map((track) => [track.id, defaultSettings()]))
+
+const v11TrackNotes = Object.fromEntries(seedTracks.map((track) => [track.id, structuredClone(track.notes)]))
+
+/** v12 在 v11 基础上的改动：终段和声、圆号力度、第 3 小节末延音线、单簧管换页提示音 */
+const v12TrackNotes = structuredClone(v11TrackNotes)
+v12TrackNotes['TR-01']![11]!.key = 'g/5'
+v12TrackNotes['TR-03']![4]!.dynamic = 'mp'
+v12TrackNotes['TR-03']![11]!.tie = true
+
+const v12PartSettings = structuredClone(seedPartSettings)
+v12PartSettings['TR-02']!.cueMeasures = 2
+
 export const seedVersions: ScoreVersion[] = [
-  { id: 'v12', author: '沈青', time: '今天 16:28', summary: '调整终段和声，补充圆号力度与连音线', trackNotes: { 'TR-03': seedTracks[2]!.notes } },
-  { id: 'v11', author: '方亦', time: '今天 14:10', summary: '移调单簧管分谱并调整换气标记', trackNotes: { 'TR-02': seedTracks[1]!.notes } },
+  { id: 'v12', author: '沈青', time: '今天 16:28', summary: '调整终段和声，补充圆号力度与连音线', trackNotes: v12TrackNotes, partSettings: v12PartSettings },
+  { id: 'v11', author: '方亦', time: '今天 14:10', summary: '移调单簧管分谱并调整换气标记', trackNotes: v11TrackNotes, partSettings: structuredClone(seedPartSettings) },
 ]
