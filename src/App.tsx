@@ -1,9 +1,9 @@
 import { Layout, Menu, Button, Tag, Space } from 'antd'
-import { AudioOutlined, FileTextOutlined, HistoryOutlined, SaveOutlined } from '@ant-design/icons'
+import { AudioOutlined, FileTextOutlined, HistoryOutlined, LockOutlined, SaveOutlined } from '@ant-design/icons'
 import { Link, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 import type { AppDispatch, RootState } from './store'
-import { saveVersion } from './store'
+import { saveVersion, startNewDraft } from './store'
 import Overview from './pages/Overview'
 import ScoreEditor from './pages/ScoreEditor'
 import Parts from './pages/Parts'
@@ -12,7 +12,10 @@ import Versions from './pages/Versions'
 export default function App() {
   const location = useLocation()
   const dispatch = useDispatch<AppDispatch>()
-  const dirty = useSelector((state: RootState) => state.score.dirty)
+  const { dirty, baselines, newDraftStarted, versions } = useSelector((state: RootState) => state.score)
+  const currentBaseline = baselines[baselines.length - 1]
+  const locked = Boolean(currentBaseline && !newDraftStarted)
+  const latestVersion = versions[0]
   const items = [
     { key: '/', icon: <AudioOutlined />, label: <Link to="/">作品总览</Link> },
     { key: '/score', icon: <FileTextOutlined />, label: <Link to="/score">总谱编辑</Link> },
@@ -27,7 +30,20 @@ export default function App() {
         <div className="side-status"><b>《潮汐线》</b><small>总谱 12 小节 · 分谱 4 册</small></div>
       </Layout.Sider>
       <Layout>
-        <Layout.Header className="top-header"><div><b>沈青 · 室内交响作品</b><Tag style={{ marginLeft: 10 }} color={dirty ? 'orange' : 'green'}>{dirty ? '未保存修改' : '版本 v12 已保存'}</Tag></div><Space><Button>打印预览</Button><Button type="primary" icon={<SaveOutlined />} onClick={() => dispatch(saveVersion())}>形成版本</Button></Space></Layout.Header>
+        <Layout.Header className="top-header">
+          <div>
+            <b>沈青 · 室内交响作品</b>
+            {locked
+              ? <Tag style={{ marginLeft: 10 }} color="gold" icon={<LockOutlined />}>{currentBaseline!.id} 冻结稿 · 总谱只读</Tag>
+              : <Tag style={{ marginLeft: 10 }} color={dirty ? 'orange' : 'green'}>{dirty ? '未保存修改' : `版本 ${latestVersion?.id ?? 'v12'} 已保存`}</Tag>}
+            {newDraftStarted && <Tag color="purple">新草稿编辑中</Tag>}
+          </div>
+          <Space>
+            {locked && <Button size="small" onClick={() => dispatch(startNewDraft())}>开启新草稿</Button>}
+            <Button>打印预览</Button>
+            <Button type="primary" icon={<SaveOutlined />} disabled={locked} onClick={() => dispatch(saveVersion())}>形成版本</Button>
+          </Space>
+        </Layout.Header>
         <Layout.Content><Routes><Route path="/" element={<Overview />} /><Route path="/score" element={<ScoreEditor />} /><Route path="/parts" element={<Parts />} /><Route path="/versions" element={<Versions />} /><Route path="*" element={<Navigate to="/" replace />} /></Routes></Layout.Content>
       </Layout>
     </Layout>
